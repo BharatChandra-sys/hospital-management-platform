@@ -28,6 +28,36 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables created/verified")
+
+    # Auto-seed on first boot — runs only if no users exist yet
+    try:
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy import select, func
+        from app.models.user import User
+        AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(func.count()).select_from(User))
+            count = result.scalar()
+        if count == 0:
+            logger.info("Empty database — running seed...")
+            import subprocess, sys, os
+            seed_path = os.path.join(os.path.dirname(__file__), "..", "..", "seed.py")
+            seed_path = os.path.abspath(seed_path)
+            proc = subprocess.run(
+                [sys.executable, seed_path],
+                capture_output=True, text=True,
+                cwd=os.path.dirname(seed_path),
+            )
+            if proc.returncode == 0:
+                logger.info("Seed completed successfully")
+            else:
+                logger.warning(f"Seed exited with code {proc.returncode}: {proc.stderr[-500:]}")
+        else:
+            logger.info(f"Database already has {count} users — skipping seed")
+    except Exception as e:
+        logger.warning(f"Auto-seed check failed (non-fatal): {e}")
+
     yield
     logger.info("Shutting down...")
     await engine.dispose()
@@ -85,3 +115,21 @@ async def root():
 @app.get("/health", tags=["Health"], include_in_schema=False)
 async def health():
     return {"status": "ok", "app": settings.APP_NAME, "env": settings.ENVIRONMENT}
+
+
+@app.post("/admin/seed", tags=["Admin"], include_in_schema=False)
+async def run_seed(secret: str = ""):
+    """Trigger seed script via HTTP — free-tier alternative to Render Shell."""
+    if secret != settings.SECRET_KEY[:16]:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Forbidden")
+    import subprocess, sys
+    result = subprocess.run(
+        [sys.executable, "seed.py"],
+        capture_output=True, text=True, cwd="/opt/render/project/src/backend"
+    )
+    return {
+        "returncode": result.returncode,
+        "stdout": result.stdout[-3000:] if result.stdout else "",
+        "stderr": result.stderr[-1000:] if result.stderr else "",
+    }
