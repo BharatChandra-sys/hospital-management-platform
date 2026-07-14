@@ -33,9 +33,9 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 
-# Hide docs in production
-_docs = "/docs" if settings.DEBUG else None
-_redoc = "/redoc" if settings.DEBUG else None
+# Show docs always (needed for demo); disable for hardened prod later
+_docs = "/docs"
+_redoc = None
 
 app = FastAPI(
     title="Deepthi Hospitals API",
@@ -75,6 +75,11 @@ app.include_router(billing_router.router)
 app.include_router(bed_router.router)
 app.include_router(inventory_router.router)
 app.include_router(admin_router.router)
+
+
+@app.get("/", tags=["Health"], include_in_schema=False)
+async def root():
+    return {"message": f"{settings.APP_NAME} API is running", "docs": "/docs"}
 
 
 @app.get("/health", tags=["Health"], include_in_schema=False)
