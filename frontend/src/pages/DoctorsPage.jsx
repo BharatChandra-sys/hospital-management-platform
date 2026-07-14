@@ -27,21 +27,22 @@ export default function DoctorsPage() {
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [dept, setDept] = useState('')
   const [searchParams] = useSearchParams()
-
-  // Pre-fill department from URL query param (?dept=Cardiology)
-  useEffect(() => {
-    const deptParam = searchParams.get('dept')
-    if (deptParam) setDept(deptParam)
-  }, [searchParams])
+  const [dept, setDept] = useState(() => searchParams.get('dept') || '')
 
   useEffect(() => {
-    setLoading(true)
-    doctorService.getAll({ search, department: dept }).then(data => {
-      setDoctors(data)
-      setLoading(false)
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true)
     })
+    doctorService.getAll({ search, department: dept }).then(data => {
+      if (!cancelled) setDoctors(data)
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [search, dept])
 
   return (

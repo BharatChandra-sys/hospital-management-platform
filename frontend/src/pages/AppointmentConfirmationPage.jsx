@@ -5,7 +5,7 @@ const HOSPITAL_LAT = 17.4318
 const HOSPITAL_LNG = 78.4071
 const MAP_EMBED = `https://maps.google.com/maps?q=Jubilee+Hills+Hyderabad+Hospital&t=&z=13&ie=UTF8&iwloc=&output=embed`
 
-function printAppointmentSlip({ appt, doctor, paid, paymentId }) {
+function printAppointmentSlip({ appt, doctor, paid }) {
   const dateStr = new Date(appt.date + 'T00:00:00').toLocaleDateString('en-IN', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   })
@@ -103,7 +103,6 @@ export default function AppointmentConfirmationPage() {
   const appt = state?.appointment
   const doctor = state?.doctor
   const paid = state?.paid
-  const paymentId = state?.paymentId
 
   if (!appt) {
     navigate('/')
@@ -132,12 +131,12 @@ export default function AppointmentConfirmationPage() {
           {paid && (
             <div className="mt-4 inline-flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-xs font-bold px-4 py-2 rounded-full">
               <span className="material-symbols-outlined text-[15px]">verified</span>
-              Payment Successful {paymentId ? `· ${paymentId}` : ''}
+              Payment Successful
             </div>
           )}
           <div className="flex gap-3 mt-6 justify-center">
             <button
-              onClick={() => printAppointmentSlip({ appt, doctor, paid, paymentId })}
+              onClick={() => printAppointmentSlip({ appt, doctor, paid })}
               className="inline-flex items-center gap-2 bg-[#0f4b80] text-white font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity text-sm">
               <span className="material-symbols-outlined text-[18px]">download</span>
               Download PDF

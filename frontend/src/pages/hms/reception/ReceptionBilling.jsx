@@ -48,7 +48,7 @@ export default function ReceptionBilling() {
       .then(data => {
         setInvoices(data.map(b => {
           let items = []
-          try { items = JSON.parse(b.items || '[]') } catch {}
+          try { items = JSON.parse(b.items || '[]') } catch (err) { console.debug('Invalid billing items JSON:', err) }
           return {
             ...b,
             patientName: b.patient || 'Unknown',
@@ -126,7 +126,8 @@ export default function ReceptionBilling() {
       })
       setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'PAID' } : i))
       toast.success(`Marked as paid (${method})`)
-    } catch {
+    } catch (err) {
+      console.warn('Failed to update payment status:', err)
       toast.error('Failed to update payment status')
     } finally {
       setMarkingPaid(null)

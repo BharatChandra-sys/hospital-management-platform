@@ -52,7 +52,7 @@ async function silentRefresh() {
 }
 
 // ─── HTTP helper ─────────────────────────────────────────────────────────────
-async function http(method, path, body, token, _retry = false) {
+async function http(method, path, body, token, retry = false) {
   const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' }
   if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -63,13 +63,14 @@ async function http(method, path, body, token, _retry = false) {
   const data = await res.json().catch(() => ({}))
 
   // Auto-refresh on 401 for HMS calls (token passed = authenticated call)
-  if (res.status === 401 && token && !_retry && BASE_URL) {
+  if (res.status === 401 && token && !retry && BASE_URL) {
     const refreshToken = getHmsRefreshToken()
     if (refreshToken) {
       try {
         const newToken = await silentRefresh()
         return http(method, path, body, newToken, true)
-      } catch {
+      } catch (err) {
+        console.warn('Silent refresh failed:', err)
         localStorage.removeItem('hms-token')
         localStorage.removeItem('hms-refresh-token')
       }
@@ -107,7 +108,7 @@ export const authService = {
     return { ...MOCK_USER, ...data, token: 'mock-jwt-token' }
   },
 
-  async sendOtp(_contact) {
+  async sendOtp() {
     await delay(500)
     return { success: true }
   },
@@ -141,7 +142,7 @@ export const doctorService = {
     if (BASE_URL) {
       const d = await http('GET', `/doctors/${id}`)
       let slots = []
-      try { slots = JSON.parse(d.available_slots || '[]') } catch (_) {}
+      try { slots = JSON.parse(d.available_slots || '[]') } catch (err) { console.debug('Invalid available slots JSON:', err); slots = [] }
       return {
         ...d,
         fee: d.consultation_fee,
@@ -163,7 +164,7 @@ export const appointmentService = {
   async book(data) {
     if (BASE_URL) return http('POST', '/appointments', data, getToken())
     await delay(800)
-    return { id: `APT-${Date.now()}`, ...data, status: 'upcoming' }
+    return { id: `APT-${Math.random().toString(36).slice(2, 10)}`, ...data, status: 'upcoming' }
   },
 
   async getAll(filters = {}) {
@@ -173,7 +174,9 @@ export const appointmentService = {
         try {
           const profile = await http('GET', '/patients/me', null, getToken())
           if (profile?.id) f.patient_id = profile.id
-        } catch (_) {}
+        } catch (err) {
+          console.debug('Patient profile lookup skipped:', err)
+        }
       }
       const params = new URLSearchParams(f)
       return http('GET', `/appointments?${params}`, null, getToken())
@@ -253,7 +256,9 @@ export const reportService = {
       try {
         const profile = await http('GET', '/patients/me', null, getToken())
         patientId = profile?.id
-      } catch (_) {}
+      } catch (err) {
+        console.debug('Patient profile lookup skipped:', err)
+      }
       const params = patientId ? `?patient_id=${patientId}` : ''
       const reports = await http('GET', `/lab-reports${params}`, null, getToken()).catch(() => [])
       return reports.map(r => ({
@@ -291,12 +296,14 @@ export const prescriptionService = {
       try {
         const profile = await http('GET', '/patients/me', null, getToken())
         patientId = profile?.id
-      } catch (_) {}
+      } catch (err) {
+        console.debug('Patient profile lookup skipped:', err)
+      }
       const params = patientId ? `?patient_id=${patientId}` : ''
       const rxList = await http('GET', `/prescriptions${params}`, null, getToken()).catch(() => [])
       return rxList.map(rx => {
         let meds = []
-        try { meds = JSON.parse(rx.medications) } catch (_) {}
+        try { meds = JSON.parse(rx.medications) } catch (err) { console.debug('Invalid prescription medications JSON:', err); meds = [] }
         const firstMed = Array.isArray(meds) && meds.length > 0 ? meds[0] : {}
         return {
           ...rx,
@@ -324,12 +331,14 @@ export const billingService = {
       try {
         const profile = await http('GET', '/patients/me', null, getToken())
         patientId = profile?.id
-      } catch (_) {}
+      } catch (err) {
+        console.debug('Patient profile lookup skipped:', err)
+      }
       const params = patientId ? `?patient_id=${patientId}` : ''
       const bills = await http('GET', `/billing${params}`, null, getToken())
       return bills.map(b => {
         let items = []
-        try { items = JSON.parse(b.items) } catch (_) {}
+        try { items = JSON.parse(b.items) } catch (err) { console.debug('Invalid billing items JSON:', err); items = [] }
         const desc = items.length > 0 ? items.map(i => i.name).join(', ') : 'Medical Services'
         return {
           ...b,

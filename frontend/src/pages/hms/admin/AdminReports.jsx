@@ -233,7 +233,7 @@ function buildPrintHTML(data, periodLabel, meta) {
 }
 
 // ─── Chart component — picks the right chart for each report type ─────────────
-function ReportChart({ data, meta }) {
+function ReportChart({ data }) {
   const rows = data.rows || []
   const summary = data.summary || {}
 

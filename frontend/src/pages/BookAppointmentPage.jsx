@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -20,6 +20,13 @@ const patientSchema = z.object({
   reason: z.string().min(3, 'Please describe your reason for visit'),
 })
 
+let localAppointmentCounter = 0
+
+function createLocalAppointmentId() {
+  localAppointmentCounter += 1
+  return `APT-${localAppointmentCounter}`
+}
+
 function getNextDays(n = 7) {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date()
@@ -29,35 +36,20 @@ function getNextDays(n = 7) {
 }
 
 export default function BookAppointmentPage() {
-  const [step, setStep] = useState(0)
-  const [selectedDept, setSelectedDept] = useState(null)
-  const [selectedDoctor, setSelectedDoctor] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(null)
-  const [selectedSlot, setSelectedSlot] = useState(null)
+  const [searchParams] = useSearchParams()
+  const initialDoctorId = searchParams.get('doctor')
+  const initialDoctor = initialDoctorId ? DOCTORS.find(d => d.id === Number(initialDoctorId)) : null
+  const [step, setStep] = useState(initialDoctor ? 2 : 0)
+  const [selectedDept, setSelectedDept] = useState(initialDoctor?.department || null)
+  const [selectedDoctor, setSelectedDoctor] = useState(initialDoctor)
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date'))
+  const [selectedSlot, setSelectedSlot] = useState(searchParams.get('time') ? decodeURIComponent(searchParams.get('time')) : null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const { addAppointment } = useAppointmentStore()
   const days = getNextDays()
 
   const { register, handleSubmit, formState: { errors }, trigger } = useForm({ resolver: zodResolver(patientSchema) })
-
-  // Pre-fill from URL params
-  useEffect(() => {
-    const docId = searchParams.get('doctor')
-    const date = searchParams.get('date')
-    const time = searchParams.get('time')
-    if (docId) {
-      const doc = DOCTORS.find(d => d.id === Number(docId))
-      if (doc) {
-        setSelectedDept(doc.department)
-        setSelectedDoctor(doc)
-        setStep(2)
-      }
-    }
-    if (date) setSelectedDate(date)
-    if (time) setSelectedSlot(decodeURIComponent(time))
-  }, [searchParams])
 
   const filteredDoctors = selectedDept ? DOCTORS.filter(d => d.department === selectedDept) : DOCTORS
 
@@ -71,7 +63,9 @@ export default function BookAppointmentPage() {
       try {
         const profile = await patientService.getProfile()
         patientId = profile?.id || null
-      } catch (_) { /* not logged in or no profile — will use null */ }
+      } catch (err) {
+        console.debug('Skipping patient profile lookup:', err)
+      }
 
       // Try to find the matching doctor in the DB by name
       try {
@@ -81,11 +75,13 @@ export default function BookAppointmentPage() {
           d.specialty?.toLowerCase() === selectedDoctor.specialty?.toLowerCase()
         )
         if (match) realDoctorId = match.id
-      } catch (_) { /* fallback to mock id */ }
+      } catch (err) {
+        console.debug('Using selected doctor fallback:', err)
+      }
 
       // Build local appt object for store/UI
       const appt = {
-        id: `APT-${Date.now()}`,
+        id: createLocalAppointmentId(),
         doctorId: realDoctorId,
         doctorName: selectedDoctor.name,
         department: selectedDept,
@@ -119,6 +115,7 @@ export default function BookAppointmentPage() {
 
       openRazorpayCheckout(appt, data, null)
     } catch (err) {
+      console.error('Appointment booking failed:', err)
       setLoading(false)
       toast.error('Something went wrong. Please try again.')
     }

@@ -16,7 +16,7 @@ export default function AdminPharmacy() {
     hmsService.getPrescriptions()
       .then(data => setPrescriptions(data.map(rx => {
         let meds = []
-        try { meds = JSON.parse(rx.medications || '[]') } catch {}
+        try { meds = JSON.parse(rx.medications || '[]') } catch (err) { console.debug('Invalid prescription medications JSON:', err) }
         const firstMed = meds[0] || {}
         return {
           ...rx,

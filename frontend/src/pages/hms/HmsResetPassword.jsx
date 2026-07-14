@@ -39,9 +39,9 @@ export default function HmsResetPassword() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [password, setPassword] = useState('')
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
-  const password = watch('password', '')
+  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
   const strength = getStrength(password)
   const loginPath = role === 'staff' ? '/hms/staff/login' : `/hms/${role}/login`
 
@@ -51,6 +51,7 @@ export default function HmsResetPassword() {
     setDone(true)
     toast.success('Password reset successfully!')
     setLoading(false)
+    setPassword('')
   }
 
   return (
@@ -92,7 +93,7 @@ export default function HmsResetPassword() {
                     <label className="text-slate-700 text-sm font-bold ml-1">New Password</label>
                     <div className="relative group">
                       <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0f4b80] transition-colors text-xl">lock</span>
-                      <input {...register('password')} type={showPass ? 'text' : 'password'}
+                      <input {...register('password', { onChange: (event) => setPassword(event.target.value) })} type={showPass ? 'text' : 'password'}
                         placeholder="Min. 8 characters"
                         className="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-4 focus:ring-[#0f4b80]/10 focus:border-[#0f4b80] outline-none transition-all text-sm font-medium placeholder:text-slate-400" />
                       <button type="button" onClick={() => setShowPass(!showPass)}

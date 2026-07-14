@@ -34,7 +34,7 @@ export default function ProfilePage() {
       savedProfile.current = profile
       reset(profile)
     })
-  }, [])
+  }, [reset])
 
   const onSubmit = (data) => {
     setFormData(data)

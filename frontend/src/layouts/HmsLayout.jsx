@@ -245,7 +245,7 @@ function SearchBar({ nav }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function SidebarContent({ nav, onClose, user, role, onLogout }) {
+function SidebarContent({ nav, onClose, role, onLogout }) {
   const location = useLocation()
   return (
     <div className="flex flex-col h-full">
@@ -308,7 +308,7 @@ export default function HmsLayout({ nav, role, loginPath }) {
     <div className="flex min-h-screen bg-[#f6f7f8]">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-64 bg-white border-r border-slate-200 flex-col fixed h-full z-30">
-        <SidebarContent nav={nav} user={user} role={role} onLogout={handleLogout} />
+        <SidebarContent nav={nav} role={role} onLogout={handleLogout} />
       </aside>
 
       {/* Mobile drawer */}

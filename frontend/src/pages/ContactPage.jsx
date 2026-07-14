@@ -17,7 +17,7 @@ const schema = z.object({
 export default function ContactPage() {
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({ resolver: zodResolver(schema) })
 
-  const onSubmit = async (data) => {
+  const onSubmit = async () => {
     await new Promise(r => setTimeout(r, 800))
     toast.success('Message sent! We\'ll get back to you within 24 hours.')
     reset()

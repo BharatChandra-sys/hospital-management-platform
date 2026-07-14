@@ -54,7 +54,9 @@ export default function AdminAppointments() {
   const handleCancel = async () => {
     try {
       await hmsService.cancelAppointment?.(cancelId)
-    } catch (_) {}
+    } catch (err) {
+      console.warn('Failed to cancel appointment:', err)
+    }
     setAppointments(prev => prev.map(a => a.id === cancelId ? { ...a, status: 'CANCELLED' } : a))
     setCancelId(null)
     toast.success('Appointment cancelled')

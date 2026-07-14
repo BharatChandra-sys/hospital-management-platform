@@ -4,7 +4,7 @@ import { MOCK_APPOINTMENTS } from '../data/mockData.js'
 
 export const useAppointmentStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       appointments: MOCK_APPOINTMENTS,
       bookingDraft: null,
 
