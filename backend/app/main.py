@@ -40,20 +40,16 @@ async def lifespan(app: FastAPI):
             result = await db.execute(select(func.count()).select_from(User))
             count = result.scalar()
         if count == 0:
-            logger.info("Empty database — running seed...")
-            import subprocess, sys, os
-            # __file__ is backend/app/main.py — seed.py is one level up at backend/seed.py
-            seed_path = os.path.join(os.path.dirname(__file__), "..", "seed.py")
-            seed_path = os.path.abspath(seed_path)
-            proc = subprocess.run(
-                [sys.executable, seed_path],
-                capture_output=True, text=True,
-                cwd=os.path.dirname(seed_path),
+            logger.info("Empty database — running seed inline...")
+            import importlib.util, os
+            seed_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "seed.py")
             )
-            if proc.returncode == 0:
-                logger.info("Seed completed successfully")
-            else:
-                logger.warning(f"Seed exited with code {proc.returncode}: {proc.stderr[-500:]}")
+            spec = importlib.util.spec_from_file_location("seed", seed_path)
+            seed_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(seed_module)
+            await seed_module.seed()
+            logger.info("Seed completed successfully")
         else:
             logger.info(f"Database already has {count} users — skipping seed")
     except Exception as e:
@@ -124,16 +120,15 @@ async def run_seed(secret: str = ""):
     if secret != settings.SECRET_KEY[:16]:
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Forbidden")
-    import subprocess, sys, os
-    seed_path = os.path.join(os.path.dirname(__file__), "..", "seed.py")
-    seed_path = os.path.abspath(seed_path)
-    result = subprocess.run(
-        [sys.executable, seed_path],
-        capture_output=True, text=True,
-        cwd=os.path.dirname(seed_path),
+    import importlib.util, os
+    seed_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "seed.py")
     )
-    return {
-        "returncode": result.returncode,
-        "stdout": result.stdout[-3000:] if result.stdout else "",
-        "stderr": result.stderr[-1000:] if result.stderr else "",
-    }
+    spec = importlib.util.spec_from_file_location("seed", seed_path)
+    seed_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(seed_module)
+    try:
+        await seed_module.seed()
+        return {"status": "ok", "message": "Seed completed successfully"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
