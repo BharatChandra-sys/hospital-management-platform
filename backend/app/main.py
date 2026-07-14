@@ -42,7 +42,8 @@ async def lifespan(app: FastAPI):
         if count == 0:
             logger.info("Empty database — running seed...")
             import subprocess, sys, os
-            seed_path = os.path.join(os.path.dirname(__file__), "..", "..", "seed.py")
+            # __file__ is backend/app/main.py — seed.py is one level up at backend/seed.py
+            seed_path = os.path.join(os.path.dirname(__file__), "..", "seed.py")
             seed_path = os.path.abspath(seed_path)
             proc = subprocess.run(
                 [sys.executable, seed_path],
@@ -123,10 +124,13 @@ async def run_seed(secret: str = ""):
     if secret != settings.SECRET_KEY[:16]:
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Forbidden")
-    import subprocess, sys
+    import subprocess, sys, os
+    seed_path = os.path.join(os.path.dirname(__file__), "..", "seed.py")
+    seed_path = os.path.abspath(seed_path)
     result = subprocess.run(
-        [sys.executable, "seed.py"],
-        capture_output=True, text=True, cwd="/opt/render/project/src/backend"
+        [sys.executable, seed_path],
+        capture_output=True, text=True,
+        cwd=os.path.dirname(seed_path),
     )
     return {
         "returncode": result.returncode,
