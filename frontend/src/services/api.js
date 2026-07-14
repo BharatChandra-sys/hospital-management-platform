@@ -5,7 +5,7 @@
 // API service — real backend via VITE_API_URL, mock fallback
 import { MOCK_CREDENTIALS, MOCK_USER, DOCTORS, MOCK_APPOINTMENTS, MOCK_PRESCRIPTIONS, MOCK_LAB_REPORTS } from '../data/mockData.js'
 
-const BASE_URL = import.meta.env.VITE_API_URL || null
+const getBaseUrl = () => import.meta.env.VITE_API_URL || null
 const delay = (ms = 600) => new Promise(r => setTimeout(r, ms))
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ async function silentRefresh() {
   _refreshing = (async () => {
     const refreshToken = getHmsRefreshToken()
     if (!refreshToken) throw new Error('No refresh token')
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+    const res = await fetch(`${getBaseUrl()}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -55,7 +55,7 @@ async function silentRefresh() {
 async function http(method, path, body, token, retry = false) {
   const headers = { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' }
   if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -63,7 +63,7 @@ async function http(method, path, body, token, retry = false) {
   const data = await res.json().catch(() => ({}))
 
   // Auto-refresh on 401 for HMS calls (token passed = authenticated call)
-  if (res.status === 401 && token && !retry && BASE_URL) {
+  if (res.status === 401 && token && !retry && getBaseUrl()) {
     const refreshToken = getHmsRefreshToken()
     if (refreshToken) {
       try {
@@ -84,7 +84,7 @@ async function http(method, path, body, token, retry = false) {
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 export const authService = {
   async login(identifier, password) {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       const data = await http('POST', '/auth/login', { email: identifier, password })
       const me = await http('GET', '/auth/me', null, data.access_token)
       return { ...me, token: data.access_token, refresh_token: data.refresh_token }
@@ -98,7 +98,7 @@ export const authService = {
   },
 
   async register(data) {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       await http('POST', '/auth/register', { ...data, role: 'PATIENT' })
       const login = await http('POST', '/auth/login', { email: data.email, password: data.password })
       const me = await http('GET', '/auth/me', null, login.access_token)
@@ -123,7 +123,7 @@ export const authService = {
 // ─── Doctors ──────────────────────────────────────────────────────────────────
 export const doctorService = {
   async getAll(filters = {}) {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       const params = new URLSearchParams()
       if (filters.department) params.set('department', filters.department)
       return http('GET', `/doctors?${params}`)
@@ -139,7 +139,7 @@ export const doctorService = {
   },
 
   async getById(id) {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       const d = await http('GET', `/doctors/${id}`)
       let slots = []
       try { slots = JSON.parse(d.available_slots || '[]') } catch (err) { console.debug('Invalid available slots JSON:', err); slots = [] }
@@ -162,13 +162,13 @@ export const doctorService = {
 // ─── Appointments ─────────────────────────────────────────────────────────────
 export const appointmentService = {
   async book(data) {
-    if (BASE_URL) return http('POST', '/appointments', data, getToken())
+    if (getBaseUrl()) return http('POST', '/appointments', data, getToken())
     await delay(800)
     return { id: `APT-${Math.random().toString(36).slice(2, 10)}`, ...data, status: 'upcoming' }
   },
 
   async getAll(filters = {}) {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       let f = { ...filters }
       if (!f.patient_id) {
         try {
@@ -186,7 +186,7 @@ export const appointmentService = {
   },
 
   async cancel(id) {
-    if (BASE_URL) return http('DELETE', `/appointments/${id}`, null, getToken())
+    if (getBaseUrl()) return http('DELETE', `/appointments/${id}`, null, getToken())
     await delay(400)
     return { success: true }
   },
@@ -203,7 +203,7 @@ export const appointmentService = {
 // ─── Patient profile ──────────────────────────────────────────────────────────
 export const patientService = {
   async getProfile() {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       const p = await http('GET', '/patients/me', null, getToken())
       return {
         ...p,
@@ -219,7 +219,7 @@ export const patientService = {
   },
 
   async updateProfile(data) {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       const payload = {
         name: data.name,
         phone: data.phone,
@@ -251,7 +251,7 @@ export const patientService = {
 // ─── Lab reports ──────────────────────────────────────────────────────────────
 export const reportService = {
   async getAll() {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       let patientId = null
       try {
         const profile = await http('GET', '/patients/me', null, getToken())
@@ -291,7 +291,7 @@ export const reportService = {
 // ─── Prescriptions ────────────────────────────────────────────────────────────
 export const prescriptionService = {
   async getAll() {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       let patientId = null
       try {
         const profile = await http('GET', '/patients/me', null, getToken())
@@ -326,7 +326,7 @@ export const prescriptionService = {
 // ─── Billing ──────────────────────────────────────────────────────────────────
 export const billingService = {
   async getAll() {
-    if (BASE_URL) {
+    if (getBaseUrl()) {
       let patientId = null
       try {
         const profile = await http('GET', '/patients/me', null, getToken())
@@ -368,18 +368,18 @@ export const billingService = {
 // ─── Admin stats ──────────────────────────────────────────────────────────────
 export const adminService = {
   async getStats() {
-    if (BASE_URL) return http('GET', '/admin/stats', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/admin/stats', null, getHmsToken())
     await delay(400)
     return { total_patients: 0, total_doctors: 0, total_appointments: 0, today_appointments: 0, available_beds: 0, total_beds: 0, pending_bills: 0, total_revenue: 0 }
   },
 
   async getReport(type, period) {
-    if (BASE_URL) return http('GET', `/admin/reports?report_type=${type}&period=${period}`, null, getHmsToken())
+    if (getBaseUrl()) return http('GET', `/admin/reports?report_type=${type}&period=${period}`, null, getHmsToken())
     return { type, period, summary: {}, rows: [] }
   },
 
   async getReportCustom(type, start, end) {
-    if (BASE_URL) return http('GET', `/admin/reports?report_type=${type}&period=custom&start_date=${start}&end_date=${end}`, null, getHmsToken())
+    if (getBaseUrl()) return http('GET', `/admin/reports?report_type=${type}&period=custom&start_date=${start}&end_date=${end}`, null, getHmsToken())
     return { type, period: 'custom', summary: {}, rows: [] }
   },
 }
@@ -388,179 +388,179 @@ export const adminService = {
 export const hmsService = {
   // Admin
   async getAppointments() {
-    if (BASE_URL) return http('GET', '/admin/appointments', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/admin/appointments', null, getHmsToken())
     return []
   },
 
   async cancelAppointment(id) {
-    if (BASE_URL) return http('DELETE', `/appointments/${id}`, null, getHmsToken())
+    if (getBaseUrl()) return http('DELETE', `/appointments/${id}`, null, getHmsToken())
     return {}
   },
 
   async getPatients() {
-    if (BASE_URL) return http('GET', '/admin/patients', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/admin/patients', null, getHmsToken())
     return []
   },
 
   async getBilling() {
-    if (BASE_URL) return http('GET', '/admin/billing', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/admin/billing', null, getHmsToken())
     return []
   },
 
   async updateBill(id, data) {
-    if (BASE_URL) return http('PATCH', `/billing/${id}`, data, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/billing/${id}`, data, getHmsToken())
     return { id, ...data }
   },
 
   async createPaymentOrder(billId) {
-    if (BASE_URL) return http('POST', `/billing/${billId}/pay`, null, getHmsToken())
+    if (getBaseUrl()) return http('POST', `/billing/${billId}/pay`, null, getHmsToken())
     return {}
   },
 
   async verifyPayment(billId, data) {
-    if (BASE_URL) return http('POST', `/billing/${billId}/verify`, data, getHmsToken())
+    if (getBaseUrl()) return http('POST', `/billing/${billId}/verify`, data, getHmsToken())
     return {}
   },
 
   async completeAppointment(id) {
-    if (BASE_URL) return http('PATCH', `/doctors/appointments/${id}`, { status: 'COMPLETED' }, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/doctors/appointments/${id}`, { status: 'COMPLETED' }, getHmsToken())
     return { id, status: 'COMPLETED' }
   },
 
   async getLabQueue() {
-    if (BASE_URL) return http('GET', '/admin/lab', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/admin/lab', null, getHmsToken())
     return []
   },
 
   async getInventory() {
-    if (BASE_URL) return http('GET', '/inventory', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/inventory', null, getHmsToken())
     return []
   },
 
   async getBeds() {
-    if (BASE_URL) return http('GET', '/beds', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/beds', null, getHmsToken())
     return []
   },
 
   async addBed(data) {
-    if (BASE_URL) return http('POST', '/beds', data, getHmsToken())
+    if (getBaseUrl()) return http('POST', '/beds', data, getHmsToken())
     return { id: Date.now(), ...data }
   },
 
   async updateBed(id, data) {
-    if (BASE_URL) return http('PATCH', `/beds/${id}`, data, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/beds/${id}`, data, getHmsToken())
     return { id, ...data }
   },
 
   async deleteBed(id) {
-    if (BASE_URL) return http('DELETE', `/beds/${id}`, null, getHmsToken())
+    if (getBaseUrl()) return http('DELETE', `/beds/${id}`, null, getHmsToken())
     return {}
   },
 
   async createLabReport(data) {
-    if (BASE_URL) return http('POST', '/lab-reports', data, getHmsToken())
+    if (getBaseUrl()) return http('POST', '/lab-reports', data, getHmsToken())
     return { id: Date.now(), ...data, status: 'PENDING' }
   },
 
   async updateLabReport(id, data) {
-    if (BASE_URL) return http('PATCH', `/lab-reports/${id}`, data, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/lab-reports/${id}`, data, getHmsToken())
     return { id, ...data }
   },
 
   async createBill(data) {
-    if (BASE_URL) return http('POST', '/billing', data, getHmsToken())
+    if (getBaseUrl()) return http('POST', '/billing', data, getHmsToken())
     return { id: Date.now(), ...data }
   },
 
   async createPatient(data) {
     // Creates user + patient profile via auth register
-    if (BASE_URL) return http('POST', '/auth/register', { ...data, role: 'PATIENT' })
+    if (getBaseUrl()) return http('POST', '/auth/register', { ...data, role: 'PATIENT' })
     return { id: Date.now(), ...data }
   },
 
   async createDoctor(data) {
-    if (BASE_URL) return http('POST', '/admin/doctors', data, getHmsToken())
+    if (getBaseUrl()) return http('POST', '/admin/doctors', data, getHmsToken())
     return { id: Date.now(), ...data }
   },
 
   async createAppointment(data) {
-    if (BASE_URL) return http('POST', '/admin/appointments', data, getHmsToken())
+    if (getBaseUrl()) return http('POST', '/admin/appointments', data, getHmsToken())
     return { id: Date.now(), ...data, status: 'SCHEDULED' }
   },
 
   async addInventoryItem(data) {
-    if (BASE_URL) return http('POST', '/inventory', data, getHmsToken())
+    if (getBaseUrl()) return http('POST', '/inventory', data, getHmsToken())
     return { id: Date.now(), ...data }
   },
 
   async updateInventoryItem(id, data) {
-    if (BASE_URL) return http('PATCH', `/inventory/${id}`, data, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/inventory/${id}`, data, getHmsToken())
     return { id, ...data }
   },
 
   async deleteInventoryItem(id) {
-    if (BASE_URL) return http('DELETE', `/inventory/${id}`, null, getHmsToken())
+    if (getBaseUrl()) return http('DELETE', `/inventory/${id}`, null, getHmsToken())
     return {}
   },
 
   async updateDoctor(id, data) {
-    if (BASE_URL) return http('PATCH', `/doctors/${id}`, data, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/doctors/${id}`, data, getHmsToken())
     return { id, ...data }
   },
 
   async getDoctorSchedule(id) {
-    if (BASE_URL) return http('GET', `/doctors/${id}/schedule`, null, getHmsToken())
+    if (getBaseUrl()) return http('GET', `/doctors/${id}/schedule`, null, getHmsToken())
     return []
   },
 
   async setDoctorSchedule(id, entries) {
-    if (BASE_URL) return http('POST', `/doctors/${id}/schedule`, entries, getHmsToken())
+    if (getBaseUrl()) return http('POST', `/doctors/${id}/schedule`, entries, getHmsToken())
     return entries
   },
 
   // Doctor portal
   async getDoctorAppointments() {
-    if (BASE_URL) return http('GET', '/doctors/me/appointments', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/doctors/me/appointments', null, getHmsToken())
     return []
   },
 
   async getDoctorPatients() {
-    if (BASE_URL) return http('GET', '/doctors/me/patients', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/doctors/me/patients', null, getHmsToken())
     return []
   },
 
   async getDoctorProfile() {
-    if (BASE_URL) return http('GET', '/doctors/me/profile', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/doctors/me/profile', null, getHmsToken())
     return null
   },
 
   async getDoctorPrescriptions() {
-    if (BASE_URL) return http('GET', '/doctors/me/prescriptions', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/doctors/me/prescriptions', null, getHmsToken())
     return []
   },
 
   async getDoctorLabReports() {
-    if (BASE_URL) return http('GET', '/doctors/me/lab-reports', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/doctors/me/lab-reports', null, getHmsToken())
     return []
   },
 
   async updateAppointmentStatus(id, status, notes) {
-    if (BASE_URL) return http('PATCH', `/doctors/appointments/${id}`, { status, notes }, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/doctors/appointments/${id}`, { status, notes }, getHmsToken())
     return { id, status }
   },
 
   async checkinAppointment(id) {
-    if (BASE_URL) return http('PATCH', `/doctors/appointments/${id}/checkin`, {}, getHmsToken())
+    if (getBaseUrl()) return http('PATCH', `/doctors/appointments/${id}/checkin`, {}, getHmsToken())
     return { id, status: 'CONFIRMED' }
   },
 
   async getPrescriptions() {
-    if (BASE_URL) return http('GET', '/admin/prescriptions', null, getHmsToken())
+    if (getBaseUrl()) return http('GET', '/admin/prescriptions', null, getHmsToken())
     return []
   },
 
   async createPrescription(data) {
-    if (BASE_URL) return http('POST', '/prescriptions', data, getHmsToken())
+    if (getBaseUrl()) return http('POST', '/prescriptions', data, getHmsToken())
     return { id: Date.now(), ...data, status: 'ACTIVE' }
   },
 }
