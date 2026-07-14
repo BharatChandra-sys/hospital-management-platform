@@ -1,8 +1,11 @@
 {
-  "name": "frontend",
+  "name": "hospital-management-platform-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "author": "Bodapati Bharat Chandra",
+  "license": "Apache-2.0",
+  "description": "Frontend for Hospital Management Platform - A comprehensive healthcare management system",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

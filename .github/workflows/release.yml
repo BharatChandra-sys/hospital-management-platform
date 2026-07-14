@@ -1,0 +1,164 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          cd frontend && npm test
+          cd ../backend && python -m pytest
+
+      - name: Get version from tag or input
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "## What's Changed" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          git log --pretty=format:"- %s (@%an)" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD >> $GITHUB_OUTPUT || echo "- Initial release" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          release_name: Hospital Management Platform ${{ steps.version.outputs.VERSION }}
+          body: |
+            # Hospital Management Platform ${{ steps.version.outputs.VERSION }}
+
+            ##  Features
+
+            ### Hospital Management System
+            - Complete patient management with medical records
+            - Doctor portal with appointment scheduling and prescriptions
+            - Admin dashboard with comprehensive reporting
+            - Reception portal for patient registration and billing
+            - Real-time appointment booking with payment integration
+
+            ### Technical Stack
+            - **Frontend**: React 19 + Vite + Tailwind CSS
+            - **Backend**: FastAPI + SQLAlchemy + PostgreSQL
+            - **Authentication**: JWT-based with role-based access control
+            - **Payments**: Razorpay integration for live payments
+            - **Deployment**: Ready for Vercel (frontend) + Render (backend)
+
+            ### Security & Quality
+            - Enterprise-level security implementation
+            - Comprehensive test coverage
+            - Production-ready configuration
+            - Professional documentation
+
+            ##  Quick Deploy
+
+            ### Frontend (Vercel)
+            [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/${{ github.repository }}&project-name=hospital-management-frontend&framework=vite&root-directory=frontend)
+
+            ### Backend (Render)
+            [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/${{ github.repository }})
+
+            ##  Documentation
+
+            - [Setup Guide](./STARTUP.md)
+            - [Deployment Guide](./DEPLOYMENT.md)
+            - [Architecture Overview](./ARCHITECTURE.md)
+            - [API Documentation](https://your-backend-url.onrender.com/docs)
+
+            ##  Security
+
+            - JWT authentication with secure password hashing
+            - Role-based access control (Admin, Doctor, Reception, Patient)
+            - Input validation and SQL injection prevention
+            - HTTPS encryption and secure headers
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ##  License
+
+            Licensed under Apache 2.0 - see [LICENSE](LICENSE) for details.
+
+            **Copyright 2024 Bodapati Bharat Chandra**
+          draft: false
+          prerelease: false
+
+      - name: Update CHANGELOG.md
+        run: |
+          echo "# Changelog" > CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          echo "## [${{ steps.version.outputs.VERSION }}] - $(date +%Y-%m-%d)" >> CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          echo "### Added" >> CHANGELOG_NEW.md
+          echo "- Initial release of Hospital Management Platform" >> CHANGELOG_NEW.md
+          echo "- Complete patient management system" >> CHANGELOG_NEW.md
+          echo "- Doctor portal with scheduling and prescriptions" >> CHANGELOG_NEW.md
+          echo "- Admin dashboard with reporting" >> CHANGELOG_NEW.md
+          echo "- Reception portal for registration and billing" >> CHANGELOG_NEW.md
+          echo "- Payment integration with Razorpay" >> CHANGELOG_NEW.md
+          echo "- Role-based access control" >> CHANGELOG_NEW.md
+          echo "- Production deployment configuration" >> CHANGELOG_NEW.md
+          echo "" >> CHANGELOG_NEW.md
+          if [ -f CHANGELOG.md ]; then
+            tail -n +2 CHANGELOG.md >> CHANGELOG_NEW.md
+          fi
+          mv CHANGELOG_NEW.md CHANGELOG.md
+
+      - name: Commit updated CHANGELOG
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHANGELOG.md
+          git commit -m "Update CHANGELOG for ${{ steps.version.outputs.VERSION }}" || exit 0
+          git push || exit 0

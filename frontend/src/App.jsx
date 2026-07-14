@@ -1,3 +1,7 @@
+// Copyright 2024-2026 Bodapati Bharat Chandra
+// Licensed under the Apache License, Version 2.0
+// https://www.apache.org/licenses/LICENSE-2.0
+
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 

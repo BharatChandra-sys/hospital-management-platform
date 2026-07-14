@@ -1,5 +1,11 @@
+# Copyright 2024-2026 Bodapati Bharat Chandra
+# Licensed under the Apache License, Version 2.0
+# https://www.apache.org/licenses/LICENSE-2.0
+
 import hmac as hmac_module
-import hashlib, razorpay
+import hashlib
+import json
+import razorpay
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -166,7 +172,6 @@ async def razorpay_webhook(request: Request, db: AsyncSession = Depends(get_db))
         if not hmac_module.compare_digest(expected, sig):
             raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
-    import json
     payload = json.loads(body)
     event = payload.get("event")
 

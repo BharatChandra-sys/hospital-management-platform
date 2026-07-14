@@ -1,3 +1,7 @@
+// Copyright 2024-2026 Bodapati Bharat Chandra
+// Licensed under the Apache License, Version 2.0
+// https://www.apache.org/licenses/LICENSE-2.0
+
 // API service — real backend via VITE_API_URL, mock fallback
 import { MOCK_CREDENTIALS, MOCK_USER, DOCTORS, MOCK_APPOINTMENTS, MOCK_PRESCRIPTIONS, MOCK_LAB_REPORTS } from '../data/mockData.js'
 

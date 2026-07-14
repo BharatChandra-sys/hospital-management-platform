@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { hmsService } from '../../../services/api.js'
+import PrescriptionPadModal from './PrescriptionPadModal.jsx'
+import LabOrderModal from './LabOrderModal.jsx'
 
 export default function DoctorDashboard() {
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showRx, setShowRx] = useState(false)
+  const [showLab, setShowLab] = useState(false)
+  const [activePatient, setActivePatient] = useState(null)
+
+  const openRx = (patient = null) => { setActivePatient(patient); setShowRx(true) }
+  const openLab = (patient = null) => { setActivePatient(patient); setShowLab(true) }
 
   useEffect(() => {
     hmsService.getDoctorAppointments()
@@ -28,6 +36,7 @@ export default function DoctorDashboard() {
   const nextAppt = appointments.find(a => a.status === 'SCHEDULED' || a.status === 'CONFIRMED')
 
   return (
+    <>
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -72,12 +81,12 @@ export default function DoctorDashboard() {
                   <p className="text-slate-500 text-sm">{nextAppt.department} · Token #{nextAppt.token_number}</p>
                   {nextAppt.reason && <p className="text-sm text-slate-600 mt-2">{nextAppt.reason}</p>}
                   <div className="flex gap-2 mt-4 flex-wrap">
-                    <button onClick={() => toast.success('Opening prescription pad')}
+                    <button onClick={() => openRx({ id: nextAppt.patient_id, name: nextAppt.patient })}
                       className="flex items-center gap-1 px-4 py-2 bg-[#0f4b80] text-white text-sm font-bold rounded-lg hover:opacity-90">
                       <span className="material-symbols-outlined text-sm">history_edu</span>
                       Write Prescription
                     </button>
-                    <button onClick={() => toast.success('Opening lab order form')}
+                    <button onClick={() => openLab({ id: nextAppt.patient_id, name: nextAppt.patient })}
                       className="flex items-center gap-1 px-4 py-2 border border-slate-200 text-slate-700 text-sm font-bold rounded-lg hover:bg-slate-50">
                       <span className="material-symbols-outlined text-sm">lab_profile</span>
                       Order Lab Test
@@ -129,12 +138,12 @@ export default function DoctorDashboard() {
             <h4 className="font-bold text-slate-800 mb-4">Quick Actions</h4>
             <div className="space-y-2">
               {[
-                { icon: 'history_edu', label: 'New Prescription', color: 'text-[#0f4b80]' },
-                { icon: 'lab_profile', label: 'Order Lab Test', color: 'text-blue-600' },
-                { icon: 'exit_to_app', label: 'Discharge Patient', color: 'text-green-600' },
-                { icon: 'clinical_notes', label: 'Add Clinical Notes', color: 'text-purple-600' },
+                { icon: 'history_edu', label: 'New Prescription', color: 'text-[#0f4b80]', action: () => openRx() },
+                { icon: 'lab_profile', label: 'Order Lab Test', color: 'text-blue-600', action: () => openLab() },
+                { icon: 'exit_to_app', label: 'Discharge Patient', color: 'text-green-600', action: () => toast.success('Discharge Patient opened') },
+                { icon: 'clinical_notes', label: 'Add Clinical Notes', color: 'text-purple-600', action: () => toast.success('Clinical Notes opened') },
               ].map(action => (
-                <button key={action.label} onClick={() => toast.success(`${action.label} opened`)}
+                <button key={action.label} onClick={action.action}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-left">
                   <span className={`material-symbols-outlined ${action.color}`}>{action.icon}</span>
                   <span className="text-sm font-medium text-slate-700">{action.label}</span>
@@ -150,5 +159,8 @@ export default function DoctorDashboard() {
         </div>
       </div>
     </div>
+    {showRx && <PrescriptionPadModal onClose={() => { setShowRx(false); setActivePatient(null) }} patient={activePatient} />}
+    {showLab && <LabOrderModal onClose={() => { setShowLab(false); setActivePatient(null) }} patient={activePatient} />}
+    </>
   )
 }

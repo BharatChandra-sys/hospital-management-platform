@@ -1,11 +1,23 @@
+# Copyright 2024-2026 Bodapati Bharat Chandra
+# Licensed under the Apache License, Version 2.0
+# https://www.apache.org/licenses/LICENSE-2.0
+
+import hmac as hmac_module
+import hashlib
+import json
+import razorpay
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Optional
+from datetime import datetime, timezone
+from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles
+from app.core.config import settings
 from app.models.user import User
 from app.models.appointment import Appointment
+from app.models.billing import Bill
 from app.schemas.appointment import AppointmentCreate, AppointmentUpdate, AppointmentResponse
 
 router = APIRouter(prefix="/appointments", tags=["Appointments"])
@@ -85,13 +97,6 @@ async def cancel_appointment(appt_id: int, db: AsyncSession = Depends(get_db), _
 
 
 # ── Payment endpoints ────────────────────────────────────────────────────────
-import hmac as hmac_module, hashlib, razorpay
-from datetime import datetime, timezone
-from pydantic import BaseModel
-from app.core.config import settings
-from app.models.billing import Bill
-
-
 def _gen_bill_number() -> str:
     return f"BILL-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
@@ -168,7 +173,6 @@ async def verify_appointment_payment(
         raise HTTPException(status_code=400, detail="Payment verification failed")
 
     # Create a PAID bill for this appointment
-    import json
     fee = 500.0
     bill = Bill(
         patient_id=appt.patient_id,

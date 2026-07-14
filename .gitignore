@@ -1,33 +1,55 @@
-# Python
+# ── Secrets ──────────────────────────────────────────────────────────────────
+.env
+*.env
+.env.*
+!.env.example
+!frontend/.env.example
+!backend/.env.example
+
+# ── Python ───────────────────────────────────────────────────────────────────
 venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.log
-.env
-*.env
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
 
-# Logs
+# ── Logs ─────────────────────────────────────────────────────────────────────
 logs/
 *.log
 
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Node
+# ── Node ─────────────────────────────────────────────────────────────────────
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Vite build output — do not push dist
+# ── Frontend build output ─────────────────────────────────────────────────────
 frontend/dist/
+frontend/.vite/
 
-# Docker
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Docker ───────────────────────────────────────────────────────────────────
 docker-compose.override.yml
 
-File cloudflared.exe
+# ── Binaries ─────────────────────────────────────────────────────────────────
+*.exe
+cloudflared.exe

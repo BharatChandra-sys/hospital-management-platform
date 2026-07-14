@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: deepthi-hms-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: deepthi-hms-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 480
+      - key: REFRESH_TOKEN_EXPIRE_MINUTES
+        value: 43200
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+databases:
+  - name: deepthi-hms-db
+    databaseName: deepthi_db
+    user: deepthi
+    plan: free
