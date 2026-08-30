@@ -34,6 +34,45 @@
 
 ---
 
+## Screenshots
+
+> **Live demo →** [deepthihospitals.vercel.app](https://deepthihospitals.vercel.app)
+
+<div align="center">
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/01-homepage.png" alt="Public homepage with doctor directory and appointment booking" width="100%" />
+      <br/><sub><b>Public Homepage</b> — doctor directory, departments, emergency info</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/02-admin-dashboard.png" alt="Admin dashboard with stats, appointments and patient overview" width="100%" />
+      <br/><sub><b>Admin Dashboard</b> — live stats, appointments, revenue overview</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/03-prescription-pad.png" alt="Doctor prescription pad with medication and dosage fields" width="100%" />
+      <br/><sub><b>Doctor Prescription Pad</b> — write prescriptions with medication, dosage, refills</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/04-booking-confirm.png" alt="Appointment booking confirmation step before payment" width="100%" />
+      <br/><sub><b>Appointment Booking</b> — 5-step flow: department → doctor → slot → details → pay</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="docs/screenshots/05-razorpay-checkout.png" alt="Razorpay payment checkout modal with test card" width="50%" />
+      <br/><sub><b>Razorpay Checkout</b> — real payment gateway in test mode · card <code>4111 1111 1111 1111</code> · OTP <code>1234</code></sub>
+    </td>
+  </tr>
+</table>
+
+</div>
+
+---
+
 ## Overview
 
 Deepthi Hospital Management System is a full-stack, multi-tenant platform designed to digitise and centralise hospital operations. It provides three distinct portals — a public patient-facing website, a patient self-service dashboard, and an internal HMS portal — all backed by a single async REST API.
